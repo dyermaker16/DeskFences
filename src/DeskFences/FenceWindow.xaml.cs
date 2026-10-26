@@ -35,7 +35,11 @@ public partial class FenceWindow : FluentWindow
             Tiles.Add(new ItemTile(item));
         TileList.ItemsSource = Tiles;
 
-        SourceInitialized += (_, _) => HideFromAltTab();
+        SourceInitialized += (_, _) =>
+        {
+            HideFromAltTab();
+            DesktopAttach.Attach(this);
+        };
     }
 
     // A tool window never shows in Alt+Tab or the taskbar.
