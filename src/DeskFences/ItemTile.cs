@@ -1,6 +1,7 @@
-﻿using System.IO;
+using System.IO;
 using System.Windows.Media;
 using DeskFences.Models;
+using DeskFences.Services;
 
 namespace DeskFences;
 
@@ -14,10 +15,11 @@ public class ItemTile
         Name = Directory.Exists(item.Path)
             ? Path.GetFileName(item.Path.TrimEnd('\\'))
             : Path.GetFileNameWithoutExtension(item.Path);
+        Icon = IconService.GetIcon(item.Path);
     }
 
     public FenceItem Item { get; }
     public string Name { get; }
     public bool IsMissing { get; }
-    public ImageSource? Icon { get; set; }   // filled in step 2.2
+    public ImageSource? Icon { get; }
 }
