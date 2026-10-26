@@ -1,15 +1,12 @@
-using System.Runtime.InteropServices;
 using System.Windows.Interop;
 using DeskFences.Models;
+using DeskFences.Native;
 using Wpf.Ui.Controls;
 
 namespace DeskFences;
 
 public partial class FenceWindow : FluentWindow
 {
-    private const int GwlExStyle = -20;
-    private const int WsExToolWindow = 0x00000080;
-
     public FenceModel Model { get; }
 
     public FenceWindow(FenceModel model)
@@ -31,12 +28,7 @@ public partial class FenceWindow : FluentWindow
     private void HideFromAltTab()
     {
         var hwnd = new WindowInteropHelper(this).Handle;
-        SetWindowLong(hwnd, GwlExStyle, GetWindowLong(hwnd, GwlExStyle) | WsExToolWindow);
+        Win32.SetWindowLong(hwnd, Win32.GWL_EXSTYLE,
+            Win32.GetWindowLong(hwnd, Win32.GWL_EXSTYLE) | Win32.WS_EX_TOOLWINDOW);
     }
-
-    [DllImport("user32.dll")]
-    private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-
-    [DllImport("user32.dll")]
-    private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 }
