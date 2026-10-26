@@ -98,6 +98,11 @@ public partial class FenceWindow : FluentWindow
         };
 
         Loaded += (_, _) => EnsureOnScreen();
+        IsVisibleChanged += (_, e) =>
+        {
+            if ((bool)e.NewValue)
+                FadeIn();
+        };
         Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
         Closed += (_, _) => Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
     }
@@ -156,6 +161,14 @@ public partial class FenceWindow : FluentWindow
         var screen = new Point((short)(value & 0xFFFF), (short)((value >> 16) & 0xFFFF));
         var p = RollButton.PointFromScreen(screen);
         return p.X >= 0 && p.Y >= 0 && p.X < RollButton.ActualWidth && p.Y < RollButton.ActualHeight;
+    }
+
+    // On start and on "Show all fences". Only the contents fade: the acrylic backdrop needs a
+    // normal (non-layered) window, and a normal window can't fade as a whole.
+    private void FadeIn()
+    {
+        ContentRoot.BeginAnimation(OpacityProperty,
+            new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)) { EasingFunction = new QuadraticEase() });
     }
 
     private const double TitleBarHeight = 32;

@@ -8,7 +8,7 @@
                  ShowInTaskbar="False"
                  WindowStartupLocation="Manual"
                  AllowDrop="True">
-    <Grid>
+    <Grid x:Name="ContentRoot" Opacity="0">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -67,9 +67,13 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
+                        <!-- Own brush per tile (not the frozen Transparent) so its colour can animate.
+                             White with alpha 0, so the fade doesn't pass through grey. -->
                         <Border x:Name="Root" Width="84" Padding="4" CornerRadius="6"
-                                Background="Transparent"
                                 MouseLeftButtonDown="Tile_MouseLeftButtonDown">
+                            <Border.Background>
+                                <SolidColorBrush Color="#00FFFFFF" />
+                            </Border.Background>
                             <Border.ContextMenu>
                                 <ContextMenu>
                                     <MenuItem Header="Open" Click="Tile_Open_Click" />
@@ -89,7 +93,24 @@
                         </Border>
                         <DataTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Root" Property="Background" Value="#30FFFFFF" />
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="Root"
+                                                            Storyboard.TargetProperty="Background.Color"
+                                                            To="#30FFFFFF" Duration="0:0:0.1" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="Root"
+                                                            Storyboard.TargetProperty="Background.Color"
+                                                            To="#00FFFFFF" Duration="0:0:0.1" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                             </Trigger>
                             <DataTrigger Binding="{Binding IsMissing}" Value="True">
                                 <Setter TargetName="Root" Property="Opacity" Value="0.4" />
