@@ -480,3 +480,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Local notes for Claude Code sessions (points into the private vault)
+CLAUDE.md
