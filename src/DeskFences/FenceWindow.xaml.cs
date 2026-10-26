@@ -70,6 +70,7 @@ public partial class FenceWindow : FluentWindow
         {
             HideFromAltTab();
             DesktopAttach.Attach(this);
+            HwndSource.FromHwnd(new WindowInteropHelper(this).Handle).AddHook(MoveHook);
         };
 
         // WPF-UI's TitleBar adds its own hook when it loads, and shows the system menu on a
@@ -161,6 +162,53 @@ public partial class FenceWindow : FluentWindow
         var screen = new Point((short)(value & 0xFFFF), (short)((value >> 16) & 0xFFFF));
         var p = RollButton.PointFromScreen(screen);
         return p.X >= 0 && p.Y >= 0 && p.X < RollButton.ActualWidth && p.Y < RollButton.ActualHeight;
+    }
+
+    private const double SnapGrid = 10;
+    private const double SnapDistance = 12;
+    private Rect _moveStart;
+
+    // Snaps after a move, not after a resize (snapping the position then would shift the far edge).
+    private IntPtr MoveHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == Win32.WM_ENTERSIZEMOVE)
+        {
+            _moveStart = new Rect(Left, Top, ActualWidth, ActualHeight);
+        }
+        else if (msg == Win32.WM_EXITSIZEMOVE)
+        {
+            var moved = Left != _moveStart.X || Top != _moveStart.Y;
+            var resized = ActualWidth != _moveStart.Width || ActualHeight != _moveStart.Height;
+            if (moved && !resized)
+                Snap();
+        }
+        return IntPtr.Zero;
+    }
+
+    // Line up with another fence's edge within SnapDistance, otherwise round to the grid.
+    private void Snap()
+    {
+        var others = Application.Current.Windows.OfType<FenceWindow>()
+            .Where(f => f != this && f.IsVisible)
+            .ToList();
+        Left = SnapAxis(Left, ActualWidth, others.SelectMany(f => new[] { f.Left, f.Left + f.ActualWidth }));
+        Top = SnapAxis(Top, ActualHeight, others.SelectMany(f => new[] { f.Top, f.Top + f.ActualHeight }));
+    }
+
+    // edges: the other fences' edges on this axis. Our start or our end may land on any of them.
+    private static double SnapAxis(double start, double size, IEnumerable<double> edges)
+    {
+        double? best = null;
+        foreach (var edge in edges)
+        {
+            foreach (var candidate in new[] { edge, edge - size })
+            {
+                var distance = Math.Abs(candidate - start);
+                if (distance <= SnapDistance && (best == null || distance < Math.Abs(best.Value - start)))
+                    best = candidate;
+            }
+        }
+        return best ?? Math.Round(start / SnapGrid) * SnapGrid;
     }
 
     // On start and on "Show all fences". Only the contents fade: the acrylic backdrop needs a

@@ -15,6 +15,8 @@ internal static class Win32
     // Clicks on the title bar arrive as non-client messages, because the title bar
     // answers WM_NCHITTEST with HTCAPTION (that's what makes it draggable).
     internal const int WM_NCHITTEST = 0x0084;
+    internal const int WM_ENTERSIZEMOVE = 0x0231;   // user starts dragging or resizing the window
+    internal const int WM_EXITSIZEMOVE = 0x0232;    // ...and lets go
     internal const int WM_NCLBUTTONDBLCLK = 0x00A3;
     internal const int WM_NCRBUTTONUP = 0x00A5;
     internal const int HTCLIENT = 1;
