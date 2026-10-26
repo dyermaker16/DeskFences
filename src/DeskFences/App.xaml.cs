@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Windows;
+using System.Windows.Threading;
 using DeskFences.Models;
 using DeskFences.Services;
 
@@ -28,6 +30,7 @@ public partial class App : Application
         }
 
         base.OnStartup(e);
+        DispatcherUnhandledException += OnUnhandledException;
 
         _store = new SettingsStore();
         _store.Load();
@@ -107,6 +110,20 @@ public partial class App : Application
                 window.Hide();
         }
         _tray?.SetFencesVisible(_fencesVisible);
+    }
+
+    // A desktop widget should not vanish over one bad message: write the error to
+    // %AppData%\DeskFences\crash.log and keep running.
+    private void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+    {
+        try
+        {
+            Directory.CreateDirectory(SettingsStore.Folder);
+            File.AppendAllText(Path.Combine(SettingsStore.Folder, "crash.log"),
+                $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}  {e.Exception}{Environment.NewLine}{Environment.NewLine}");
+        }
+        catch (IOException) { }
+        e.Handled = true;
     }
 
     private void SetDoubleClickDesktop(bool enabled)

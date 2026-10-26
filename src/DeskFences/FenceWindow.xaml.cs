@@ -112,7 +112,10 @@ public partial class FenceWindow : FluentWindow
     // double-click = rename, right-click = fence menu.
     private IntPtr TitleBarHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        if (wParam.ToInt32() != Win32.HTCAPTION || _renaming)
+        // This sees every message. Check the message first, and never convert wParam to int:
+        // for some messages (e.g. mouse wheel down) it doesn't fit in 32 bits.
+        if ((msg != Win32.WM_NCLBUTTONDBLCLK && msg != Win32.WM_NCRBUTTONUP)
+            || wParam != Win32.HTCAPTION || _renaming)
             return IntPtr.Zero;
 
         if (msg == Win32.WM_NCLBUTTONDBLCLK)
