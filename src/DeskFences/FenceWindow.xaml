@@ -20,7 +20,39 @@
                      ShowClose="False"
                      Height="32" />
 
-        <!-- Icon grid goes here in Phase 2 -->
-        <Grid Grid.Row="1" Margin="12" />
+        <ScrollViewer Grid.Row="1" Margin="12,0,12,12"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl x:Name="TileList">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border x:Name="Root" Width="84" Padding="4" CornerRadius="6"
+                                Background="Transparent">
+                            <StackPanel>
+                                <Image Source="{Binding Icon}" Width="48" Height="48" />
+                                <TextBlock Text="{Binding Name}"
+                                           Foreground="White" FontSize="12"
+                                           TextAlignment="Center" TextWrapping="Wrap"
+                                           TextTrimming="CharacterEllipsis" MaxHeight="34"
+                                           Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+                        <DataTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#30FFFFFF" />
+                            </Trigger>
+                            <DataTrigger Binding="{Binding IsMissing}" Value="True">
+                                <Setter TargetName="Root" Property="Opacity" Value="0.4" />
+                            </DataTrigger>
+                        </DataTemplate.Triggers>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
     </Grid>
 </ui:FluentWindow>

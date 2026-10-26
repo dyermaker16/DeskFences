@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Windows.Interop;
 using DeskFences.Models;
 using DeskFences.Native;
@@ -8,6 +9,7 @@ namespace DeskFences;
 public partial class FenceWindow : FluentWindow
 {
     public FenceModel Model { get; }
+    public ObservableCollection<ItemTile> Tiles { get; } = new();
 
     public FenceWindow(FenceModel model)
     {
@@ -20,6 +22,10 @@ public partial class FenceWindow : FluentWindow
         Top = model.Top;
         Width = model.Width;
         Height = model.Height;
+
+        foreach (var item in model.Items)
+            Tiles.Add(new ItemTile(item));
+        TileList.ItemsSource = Tiles;
 
         SourceInitialized += (_, _) => HideFromAltTab();
     }
