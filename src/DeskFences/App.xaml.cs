@@ -14,6 +14,7 @@ public partial class App : Application
     // Only the instance that owns the mutex creates these. A second launch must never save over the file.
     private SettingsStore? _store;
     private TrayIcon? _tray;
+    private DesktopDoubleClick? _desktopClick;
     private readonly List<FenceWindow> _fences = new();
     private bool _fencesVisible = true;
 
@@ -41,16 +42,22 @@ public partial class App : Application
         foreach (var model in _store.Settings.Fences)
             OpenFence(model);
 
-        _tray = new TrayIcon(_store.Settings.StartWithWindows);
+        _tray = new TrayIcon(_store.Settings.StartWithWindows, _store.Settings.DoubleClickDesktopToggles);
         _tray.NewFenceClicked += NewFence;
         _tray.ToggleFencesClicked += ToggleFences;
         _tray.StartWithWindowsChanged += SetStartWithWindows;
+        _tray.DoubleClickDesktopChanged += SetDoubleClickDesktop;
         _tray.QuitClicked += Shutdown;
+
+        _desktopClick = new DesktopDoubleClick(ToggleFences);
+        if (_store.Settings.DoubleClickDesktopToggles)
+            _desktopClick.Start();
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
         _store?.SaveNow();
+        _desktopClick?.Dispose();
         _tray?.Dispose();
         base.OnExit(e);
     }
@@ -100,6 +107,16 @@ public partial class App : Application
                 window.Hide();
         }
         _tray?.SetFencesVisible(_fencesVisible);
+    }
+
+    private void SetDoubleClickDesktop(bool enabled)
+    {
+        _store!.Settings.DoubleClickDesktopToggles = enabled;
+        _store.RequestSave();
+        if (enabled)
+            _desktopClick!.Start();
+        else
+            _desktopClick!.Stop();
     }
 
     private void SetStartWithWindows(bool enabled)

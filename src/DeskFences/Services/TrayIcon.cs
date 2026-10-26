@@ -16,11 +16,19 @@ public sealed class TrayIcon : IDisposable
     public event Action? ToggleFencesClicked;
     public event Action? QuitClicked;
     public event Action<bool>? StartWithWindowsChanged;
+    public event Action<bool>? DoubleClickDesktopChanged;
 
-    public TrayIcon(bool startWithWindows)
+    public TrayIcon(bool startWithWindows, bool doubleClickDesktop)
     {
         _toggleItem = new WinForms.ToolStripMenuItem("Hide all fences");
         _toggleItem.Click += (_, _) => ToggleFencesClicked?.Invoke();
+
+        var doubleClickItem = new WinForms.ToolStripMenuItem("Double-click desktop hides fences")
+        {
+            CheckOnClick = true,
+            Checked = doubleClickDesktop
+        };
+        doubleClickItem.CheckedChanged += (_, _) => DoubleClickDesktopChanged?.Invoke(doubleClickItem.Checked);
 
         _startupItem = new WinForms.ToolStripMenuItem("Start with Windows")
         {
@@ -32,6 +40,7 @@ public sealed class TrayIcon : IDisposable
         var menu = new WinForms.ContextMenuStrip();
         menu.Items.Add("New fence", null, (_, _) => NewFenceClicked?.Invoke());
         menu.Items.Add(_toggleItem);
+        menu.Items.Add(doubleClickItem);
         menu.Items.Add(_startupItem);
         menu.Items.Add("Open settings folder", null, (_, _) =>
         {
