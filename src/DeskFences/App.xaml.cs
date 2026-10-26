@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
@@ -17,6 +18,10 @@ public partial class App : Application
     private SettingsStore? _store;
     private TrayIcon? _tray;
     private DesktopDoubleClick? _desktopClick;
+    private ResourceDictionary? _theme;
+
+    // Files in Themes/. The first one is the default.
+    public static readonly string[] ThemeNames = { "Clean", "Terminal" };
     private readonly List<FenceWindow> _fences = new();
     private bool _fencesVisible = true;
 
@@ -34,6 +39,7 @@ public partial class App : Application
 
         _store = new SettingsStore();
         _store.Load();
+        _store.Settings.Theme = ApplyTheme(_store.Settings.Theme);
         if (_store.Settings.Fences.Count == 0)
         {
             // First run: two starter fences.
@@ -45,7 +51,8 @@ public partial class App : Application
         foreach (var model in _store.Settings.Fences)
             OpenFence(model);
 
-        _tray = new TrayIcon(_store.Settings.StartWithWindows, _store.Settings.DoubleClickDesktopToggles);
+        _tray = new TrayIcon(_store.Settings.StartWithWindows, _store.Settings.DoubleClickDesktopToggles, _store.Settings.Theme);
+        _tray.ThemeChanged += SetTheme;
         _tray.NewFenceClicked += NewFence;
         _tray.ToggleFencesClicked += ToggleFences;
         _tray.StartWithWindowsChanged += SetStartWithWindows;
@@ -124,6 +131,27 @@ public partial class App : Application
         }
         catch (IOException) { }
         e.Handled = true;
+    }
+
+    // Fences use the theme's keys as DynamicResource, so swapping the dictionary restyles them live.
+    // Returns the theme actually used (an unknown name falls back to the default).
+    private string ApplyTheme(string name)
+    {
+        if (!ThemeNames.Contains(name))
+            name = ThemeNames[0];
+
+        var theme = new ResourceDictionary { Source = new Uri($"pack://application:,,,/Themes/{name}.xaml") };
+        if (_theme != null)
+            Resources.MergedDictionaries.Remove(_theme);
+        Resources.MergedDictionaries.Add(theme);
+        _theme = theme;
+        return name;
+    }
+
+    private void SetTheme(string name)
+    {
+        _store!.Settings.Theme = ApplyTheme(name);
+        _store.RequestSave();
     }
 
     private void SetDoubleClickDesktop(bool enabled)

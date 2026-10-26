@@ -17,9 +17,24 @@ public sealed class TrayIcon : IDisposable
     public event Action? QuitClicked;
     public event Action<bool>? StartWithWindowsChanged;
     public event Action<bool>? DoubleClickDesktopChanged;
+    public event Action<string>? ThemeChanged;
 
-    public TrayIcon(bool startWithWindows, bool doubleClickDesktop)
+    public TrayIcon(bool startWithWindows, bool doubleClickDesktop, string theme)
     {
+        // One checked item at a time, like radio buttons.
+        var themeMenu = new WinForms.ToolStripMenuItem("Theme");
+        foreach (var name in App.ThemeNames)
+        {
+            var item = new WinForms.ToolStripMenuItem(name) { Checked = name == theme };
+            item.Click += (_, _) =>
+            {
+                foreach (WinForms.ToolStripMenuItem other in themeMenu.DropDownItems)
+                    other.Checked = other == item;
+                ThemeChanged?.Invoke(name);
+            };
+            themeMenu.DropDownItems.Add(item);
+        }
+
         _toggleItem = new WinForms.ToolStripMenuItem("Hide all fences");
         _toggleItem.Click += (_, _) => ToggleFencesClicked?.Invoke();
 
@@ -41,6 +56,7 @@ public sealed class TrayIcon : IDisposable
         menu.Items.Add("New fence", null, (_, _) => NewFenceClicked?.Invoke());
         menu.Items.Add(_toggleItem);
         menu.Items.Add(doubleClickItem);
+        menu.Items.Add(themeMenu);
         menu.Items.Add(_startupItem);
         menu.Items.Add("Open settings folder", null, (_, _) =>
         {

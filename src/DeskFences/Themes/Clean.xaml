@@ -1,0 +1,9 @@
+<!-- Clean: Windows 11 look. White Segoe UI text, nothing over the blur. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="FenceForeground" Color="White" />
+    <FontFamily x:Key="FenceFontFamily">Segoe UI</FontFamily>
+    <SolidColorBrush x:Key="FenceBackground" Color="Transparent" />
+    <SolidColorBrush x:Key="FenceBorderBrush" Color="Transparent" />
+    <Thickness x:Key="FenceBorderThickness">0</Thickness>
+</ResourceDictionary>

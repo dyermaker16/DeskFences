@@ -51,7 +51,7 @@ public partial class FenceWindow : FluentWindow
         InitializeComponent();
 
         Title = model.Title;
-        TitleBarControl.Title = model.Title;
+        TitleText.Text = model.Title;
         Left = model.Left;
         Top = model.Top;
         Width = model.Width;
@@ -402,7 +402,7 @@ public partial class FenceWindow : FluentWindow
 
         Model.Title = title;
         Title = title;
-        TitleBarControl.Title = title;
+        TitleText.Text = title;
         _store.RequestSave();
     }
 

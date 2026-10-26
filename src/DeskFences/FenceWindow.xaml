@@ -7,22 +7,33 @@
                  ExtendsContentIntoTitleBar="True"
                  ShowInTaskbar="False"
                  WindowStartupLocation="Manual"
-                 AllowDrop="True">
+                 AllowDrop="True"
+                 FontFamily="{DynamicResource FenceFontFamily}">
     <Grid x:Name="ContentRoot" Opacity="0">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Colour layer: behind everything, covers the whole fence. -->
+        <!-- Theme layer (Themes/*.xaml), then the fence's own colour on top of it. -->
+        <Border x:Name="ThemeLayer" Grid.RowSpan="2" CornerRadius="8"
+                Background="{DynamicResource FenceBackground}"
+                BorderBrush="{DynamicResource FenceBorderBrush}"
+                BorderThickness="{DynamicResource FenceBorderThickness}" />
         <Border x:Name="TintLayer" Grid.RowSpan="2" />
 
+        <!-- Drag, hit testing and title-bar clicks. Its own title stays empty: TitleText draws it. -->
         <ui:TitleBar x:Name="TitleBarControl"
                      Grid.Row="0"
                      ShowMinimize="False"
                      ShowMaximize="False"
                      ShowClose="False"
                      Height="32" />
+
+        <TextBlock x:Name="TitleText" Grid.Row="0" Margin="12,0,40,0"
+                   VerticalAlignment="Center" FontSize="12"
+                   Foreground="{DynamicResource FenceForeground}"
+                   TextTrimming="CharacterEllipsis" IsHitTestVisible="False" />
 
         <!-- Roll-up: collapses the fence to its title bar. TitleBarHook makes it clickable. -->
         <Button x:Name="RollButton" Grid.Row="0"
@@ -41,7 +52,7 @@
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Button.Template>
-            <ui:SymbolIcon Symbol="ChevronUp24" FontSize="14" Foreground="White"
+            <ui:SymbolIcon Symbol="ChevronUp24" FontSize="14" Foreground="{DynamicResource FenceForeground}"
                            RenderTransformOrigin="0.5,0.5">
                 <ui:SymbolIcon.RenderTransform>
                     <RotateTransform x:Name="RollRotation" />
@@ -53,7 +64,7 @@
         <TextBox x:Name="RenameBox" Grid.Row="0"
                  Visibility="Collapsed" Height="24" Margin="8,4,40,0"
                  VerticalContentAlignment="Center" Padding="4,0"
-                 Background="#40FFFFFF" Foreground="White" BorderThickness="0"
+                 Background="#40FFFFFF" Foreground="{DynamicResource FenceForeground}" BorderThickness="0"
                  KeyDown="RenameBox_KeyDown" LostFocus="RenameBox_LostFocus" />
 
         <ScrollViewer x:Name="ItemsArea" Grid.Row="1" Margin="12,0,12,12"
@@ -85,7 +96,7 @@
                             <StackPanel>
                                 <Image Source="{Binding Icon}" Width="48" Height="48" />
                                 <TextBlock Text="{Binding Name}"
-                                           Foreground="White" FontSize="12"
+                                           Foreground="{DynamicResource FenceForeground}" FontSize="12"
                                            TextAlignment="Center" TextWrapping="Wrap"
                                            TextTrimming="CharacterEllipsis" MaxHeight="34"
                                            Margin="0,4,0,0" />

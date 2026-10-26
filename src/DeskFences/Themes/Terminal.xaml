@@ -1,0 +1,9 @@
+<!-- Terminal: green-on-black, matches the system-monitor wallpaper. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="FenceForeground" Color="#33FF66" />
+    <FontFamily x:Key="FenceFontFamily">Cascadia Mono, Consolas</FontFamily>
+    <SolidColorBrush x:Key="FenceBackground" Color="#C0000A00" />
+    <SolidColorBrush x:Key="FenceBorderBrush" Color="#6033FF66" />
+    <Thickness x:Key="FenceBorderThickness">1</Thickness>
+</ResourceDictionary>
