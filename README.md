@@ -55,3 +55,7 @@ the desktop's icon list (MSAA hit test) whether the click was on an icon.
 
 Inspired by [NoFences](https://github.com/Twometer/NoFences) by Twometer and by Stardock Fences.
 Built with [WPF UI](https://github.com/lepoco/wpfui).
+
+## License
+
+[MIT](LICENSE)
