@@ -33,7 +33,16 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <Border x:Name="Root" Width="84" Padding="4" CornerRadius="6"
-                                Background="Transparent">
+                                Background="Transparent"
+                                MouseLeftButtonDown="Tile_MouseLeftButtonDown">
+                            <Border.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Open" Click="Tile_Open_Click" />
+                                    <MenuItem Header="Open file location" Click="Tile_OpenLocation_Click" />
+                                    <Separator />
+                                    <MenuItem Header="Remove from fence" Click="Tile_Remove_Click" />
+                                </ContextMenu>
+                            </Border.ContextMenu>
                             <StackPanel>
                                 <Image Source="{Binding Icon}" Width="48" Height="48" />
                                 <TextBlock Text="{Binding Name}"

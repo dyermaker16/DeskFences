@@ -19,6 +19,9 @@ public partial class App : Application
         }
 
         base.OnStartup(e);
+
+        // Temporary until saving (Phase 4) and the tray "New fence" (Phase 5) exist.
         new FenceWindow(new FenceModel { Title = "Games" }).Show();
+        new FenceWindow(new FenceModel { Title = "Dev", Left = 520, Top = 120 }).Show();
     }
 }

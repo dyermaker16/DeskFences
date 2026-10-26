@@ -1,15 +1,21 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Interop;
 using DeskFences.Models;
 using DeskFences.Native;
+using DeskFences.Services;
 using Wpf.Ui.Controls;
 
 namespace DeskFences;
 
 public partial class FenceWindow : FluentWindow
 {
+    private const char Quote = '"';
+
     public FenceModel Model { get; }
     public ObservableCollection<ItemTile> Tiles { get; } = new();
 
@@ -65,5 +71,67 @@ public partial class FenceWindow : FluentWindow
 
         e.Effects = DragDropEffects.Link;
         e.Handled = true;
+    }
+
+    private void Tile_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ClickCount != 2)
+            return;
+
+        if (TileOf(sender) is { } tile)
+            OpenItem(tile);
+        e.Handled = true;
+    }
+
+    private void Tile_Open_Click(object sender, RoutedEventArgs e)
+    {
+        if (TileOf(sender) is { } tile)
+            OpenItem(tile);
+    }
+
+    private void Tile_OpenLocation_Click(object sender, RoutedEventArgs e)
+    {
+        if (TileOf(sender) is not { } tile)
+            return;
+
+        // For a shortcut, select the real target; fall back to the shortcut itself.
+        var path = tile.Item.Path;
+        if (Path.GetExtension(path).Equals(".lnk", StringComparison.OrdinalIgnoreCase))
+            path = ShortcutResolver.GetTarget(path) ?? path;
+
+        var target = File.Exists(path) || Directory.Exists(path) ? path : tile.Item.Path;
+        Process.Start(new ProcessStartInfo("explorer.exe")
+        {
+            Arguments = $"/select,{Quote}{target}{Quote}",
+            UseShellExecute = false
+        });
+    }
+
+    private void Tile_Remove_Click(object sender, RoutedEventArgs e)
+    {
+        if (TileOf(sender) is not { } tile)
+            return;
+
+        // Removes the tile from this fence only. The file itself is never touched.
+        Model.Items.Remove(tile.Item);
+        Tiles.Remove(tile);
+    }
+
+    private void OpenItem(ItemTile tile)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(tile.Item.Path) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show($"Could not open {tile.Name}.\n\n{ex.Message}", "Desk Fences");
+        }
+    }
+
+    // The tile is the DataContext of the element that was clicked, or of the menu item's owner.
+    private static ItemTile? TileOf(object sender)
+    {
+        return (sender as FrameworkElement)?.DataContext as ItemTile;
     }
 }
