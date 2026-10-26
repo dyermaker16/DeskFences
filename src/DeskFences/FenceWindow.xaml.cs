@@ -16,12 +16,15 @@ public partial class FenceWindow : FluentWindow
 {
     private const char Quote = '"';
 
+    private readonly SettingsStore _store;
+
     public FenceModel Model { get; }
     public ObservableCollection<ItemTile> Tiles { get; } = new();
 
-    public FenceWindow(FenceModel model)
+    public FenceWindow(FenceModel model, SettingsStore store)
     {
         Model = model;
+        _store = store;
         InitializeComponent();
 
         Title = model.Title;
@@ -39,6 +42,19 @@ public partial class FenceWindow : FluentWindow
         {
             HideFromAltTab();
             DesktopAttach.Attach(this);
+        };
+
+        LocationChanged += (_, _) =>
+        {
+            Model.Left = Left;
+            Model.Top = Top;
+            _store.RequestSave();
+        };
+        SizeChanged += (_, _) =>
+        {
+            Model.Width = Width;
+            Model.Height = Height;
+            _store.RequestSave();
         };
     }
 
@@ -72,6 +88,7 @@ public partial class FenceWindow : FluentWindow
             Model.Items.Add(item);
             Tiles.Add(new ItemTile(item));
         }
+        _store.RequestSave();
 
         e.Effects = DragDropEffects.Link;
         e.Handled = true;
@@ -119,6 +136,7 @@ public partial class FenceWindow : FluentWindow
         // Removes the tile from this fence only. The file itself is never touched.
         Model.Items.Remove(tile.Item);
         Tiles.Remove(tile);
+        _store.RequestSave();
     }
 
     private void OpenItem(ItemTile tile)
