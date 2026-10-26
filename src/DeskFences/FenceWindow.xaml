@@ -6,7 +6,8 @@
                  WindowBackdropType="Acrylic"
                  ExtendsContentIntoTitleBar="True"
                  ShowInTaskbar="False"
-                 WindowStartupLocation="Manual">
+                 WindowStartupLocation="Manual"
+                 AllowDrop="True">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
