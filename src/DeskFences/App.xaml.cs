@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Windows;
 using DeskFences.Models;
@@ -10,8 +11,11 @@ public partial class App : Application
     // Kept as a field so the mutex lives as long as the app does.
     private Mutex? _mutex;
 
-    // Only the instance that owns the mutex creates this. A second launch must never save over the file.
+    // Only the instance that owns the mutex creates these. A second launch must never save over the file.
     private SettingsStore? _store;
+    private TrayIcon? _tray;
+    private readonly List<FenceWindow> _fences = new();
+    private bool _fencesVisible = true;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -28,19 +32,80 @@ public partial class App : Application
         _store.Load();
         if (_store.Settings.Fences.Count == 0)
         {
-            // First run: two starter fences. The tray "New fence" comes in Phase 5.
+            // First run: two starter fences.
             _store.Settings.Fences.Add(new FenceModel { Title = "Games" });
             _store.Settings.Fences.Add(new FenceModel { Title = "Dev", Left = 520, Top = 120 });
             _store.SaveNow();
         }
 
         foreach (var model in _store.Settings.Fences)
-            new FenceWindow(model, _store).Show();
+            OpenFence(model);
+
+        _tray = new TrayIcon(_store.Settings.StartWithWindows);
+        _tray.NewFenceClicked += NewFence;
+        _tray.ToggleFencesClicked += ToggleFences;
+        _tray.StartWithWindowsChanged += SetStartWithWindows;
+        _tray.QuitClicked += Shutdown;
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
         _store?.SaveNow();
+        _tray?.Dispose();
         base.OnExit(e);
+    }
+
+    private void OpenFence(FenceModel model)
+    {
+        var window = new FenceWindow(model, _store!);
+        window.NewFenceRequested += NewFence;
+        window.DeleteRequested += DeleteFence;
+        _fences.Add(window);
+        window.Show();
+    }
+
+    private void DeleteFence(FenceWindow window)
+    {
+        _fences.Remove(window);
+        _store!.Settings.Fences.Remove(window.Model);
+        _store.SaveNow();
+        window.Close();
+    }
+
+    private void NewFence()
+    {
+        // A new fence while the others are hidden would look lonely: show them all first.
+        if (!_fencesVisible)
+            ToggleFences();
+
+        // Starts in the middle of the work area, so it isn't hidden behind the taskbar.
+        var area = SystemParameters.WorkArea;
+        var model = new FenceModel { Title = "New fence" };
+        model.Left = area.Left + (area.Width - model.Width) / 2;
+        model.Top = area.Top + (area.Height - model.Height) / 2;
+
+        _store!.Settings.Fences.Add(model);
+        _store.SaveNow();
+        OpenFence(model);
+    }
+
+    private void ToggleFences()
+    {
+        _fencesVisible = !_fencesVisible;
+        foreach (var window in _fences)
+        {
+            if (_fencesVisible)
+                window.Show();
+            else
+                window.Hide();
+        }
+        _tray?.SetFencesVisible(_fencesVisible);
+    }
+
+    private void SetStartWithWindows(bool enabled)
+    {
+        _store!.Settings.StartWithWindows = enabled;
+        _store.RequestSave();
+        StartupRegistration.Set(enabled);
     }
 }

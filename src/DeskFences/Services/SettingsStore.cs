@@ -8,7 +8,7 @@ namespace DeskFences.Services;
 // Loads and saves %AppData%\DeskFences\fences.json. Call from the UI thread.
 public sealed class SettingsStore
 {
-    private static readonly string Folder = Path.Combine(
+    public static readonly string Folder = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DeskFences");
     private static readonly string FilePath = Path.Combine(Folder, "fences.json");
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };

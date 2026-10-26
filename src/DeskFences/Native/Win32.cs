@@ -5,8 +5,16 @@ namespace DeskFences.Native;
 // Every Win32 call the app makes lives here.
 internal static class Win32
 {
+    internal const int GWL_STYLE = -16;
     internal const int GWL_EXSTYLE = -20;
+    internal const int WS_MAXIMIZEBOX = 0x00010000;
     internal const int WS_EX_TOOLWINDOW = 0x00000080;
+
+    // Clicks on the title bar arrive as non-client messages, because the title bar
+    // answers WM_NCHITTEST with HTCAPTION (that's what makes it draggable).
+    internal const int WM_NCLBUTTONDBLCLK = 0x00A3;
+    internal const int WM_NCRBUTTONUP = 0x00A5;
+    internal const int HTCAPTION = 2;
 
     internal const uint SHGFI_SYSICONINDEX = 0x4000;
     internal const int SHIL_EXTRALARGE = 2;          // 48x48

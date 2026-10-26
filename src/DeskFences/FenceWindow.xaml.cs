@@ -5,10 +5,15 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Threading;
 using DeskFences.Models;
 using DeskFences.Native;
 using DeskFences.Services;
 using Wpf.Ui.Controls;
+using ContextMenu = System.Windows.Controls.ContextMenu;
+using MenuItem = System.Windows.Controls.MenuItem;
+using RoutedEventHandler = System.Windows.RoutedEventHandler;
 
 namespace DeskFences;
 
@@ -16,10 +21,27 @@ public partial class FenceWindow : FluentWindow
 {
     private const char Quote = '"';
 
+    // Same six presets as the plan. Null = no colour.
+    private static readonly (string Name, string? Tint)[] ColourPresets =
+    {
+        ("Default", null),
+        ("Blue", "#3060A0FF"),
+        ("Green", "#3040C070"),
+        ("Purple", "#30A060FF"),
+        ("Red", "#30FF5050"),
+        ("Orange", "#30FFA040"),
+    };
+
     private readonly SettingsStore _store;
+    private bool _renaming;
+    private readonly ContextMenu _titleMenu;
 
     public FenceModel Model { get; }
     public ObservableCollection<ItemTile> Tiles { get; } = new();
+
+    // App owns the fence list, so these ask it to act.
+    public event Action? NewFenceRequested;
+    public event Action<FenceWindow>? DeleteRequested;
 
     public FenceWindow(FenceModel model, SettingsStore store)
     {
@@ -34,6 +56,9 @@ public partial class FenceWindow : FluentWindow
         Width = model.Width;
         Height = model.Height;
 
+        _titleMenu = BuildTitleMenu();
+        ApplyTint();
+
         foreach (var item in model.Items)
             Tiles.Add(new ItemTile(item));
         TileList.ItemsSource = Tiles;
@@ -44,14 +69,24 @@ public partial class FenceWindow : FluentWindow
             DesktopAttach.Attach(this);
         };
 
+        // WPF-UI's TitleBar adds its own hook when it loads, and shows the system menu on a
+        // right-click. Hooks run newest first, so add ours after it to get those clicks first.
+        Loaded += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, () =>
+            HwndSource.FromHwnd(new WindowInteropHelper(this).Handle).AddHook(TitleBarHook));
+
+        // Only a normal (not maximized/minimized) position is worth saving.
         LocationChanged += (_, _) =>
         {
+            if (WindowState != WindowState.Normal)
+                return;
             Model.Left = Left;
             Model.Top = Top;
             _store.RequestSave();
         };
         SizeChanged += (_, _) =>
         {
+            if (WindowState != WindowState.Normal)
+                return;
             Model.Width = Width;
             Model.Height = Height;
             _store.RequestSave();
@@ -63,11 +98,35 @@ public partial class FenceWindow : FluentWindow
     }
 
     // A tool window never shows in Alt+Tab or the taskbar.
+    // No maximize box either, so Windows never maximizes a fence (e.g. on a title double-click).
     private void HideFromAltTab()
     {
         var hwnd = new WindowInteropHelper(this).Handle;
         Win32.SetWindowLong(hwnd, Win32.GWL_EXSTYLE,
             Win32.GetWindowLong(hwnd, Win32.GWL_EXSTYLE) | Win32.WS_EX_TOOLWINDOW);
+        Win32.SetWindowLong(hwnd, Win32.GWL_STYLE,
+            Win32.GetWindowLong(hwnd, Win32.GWL_STYLE) & ~Win32.WS_MAXIMIZEBOX);
+    }
+
+    // WPF never sees mouse clicks on the title bar (they are non-client), so handle them here:
+    // double-click = rename, right-click = fence menu.
+    private IntPtr TitleBarHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (wParam.ToInt32() != Win32.HTCAPTION || _renaming)
+            return IntPtr.Zero;
+
+        if (msg == Win32.WM_NCLBUTTONDBLCLK)
+        {
+            BeginRename();
+            handled = true;
+        }
+        else if (msg == Win32.WM_NCRBUTTONUP)
+        {
+            _titleMenu.PlacementTarget = this;
+            _titleMenu.IsOpen = true;
+            handled = true;
+        }
+        return IntPtr.Zero;
     }
 
     private const double TitleBarHeight = 32;
@@ -164,6 +223,129 @@ public partial class FenceWindow : FluentWindow
         Model.Items.Remove(tile.Item);
         Tiles.Remove(tile);
         _store.RequestSave();
+    }
+
+    // The menu is built in code and opened from TitleBarHook.
+    private ContextMenu BuildTitleMenu()
+    {
+        var colour = new MenuItem { Header = "Colour" };
+        colour.SubmenuOpened += ColourMenu_SubmenuOpened;
+        foreach (var (name, tint) in ColourPresets)
+        {
+            var item = new MenuItem { Header = name, IsCheckable = true, Tag = tint };
+            item.Click += (_, _) => SetTint(tint);
+            colour.Items.Add(item);
+        }
+
+        var menu = new ContextMenu();
+        menu.Items.Add(Item("Rename", Rename_Click));
+        menu.Items.Add(colour);
+        menu.Items.Add(new System.Windows.Controls.Separator());
+        menu.Items.Add(Item("New fence", NewFence_Click));
+        menu.Items.Add(Item("Delete fence", Delete_Click));
+        return menu;
+    }
+
+    private static MenuItem Item(string header, RoutedEventHandler onClick)
+    {
+        var item = new MenuItem { Header = header };
+        item.Click += onClick;
+        return item;
+    }
+
+    private void Rename_Click(object sender, RoutedEventArgs e) => BeginRename();
+
+    private void BeginRename()
+    {
+        _renaming = true;
+        RenameBox.Text = Model.Title;
+        RenameBox.Visibility = Visibility.Visible;
+        Activate();
+        // Focus fails until the box has been laid out, so wait for that first.
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
+        {
+            RenameBox.Focus();
+            RenameBox.SelectAll();
+        });
+    }
+
+    // The flag stops LostFocus (fired when the box is hidden) from saving a cancelled rename.
+    private void CommitRename()
+    {
+        if (!_renaming)
+            return;
+
+        _renaming = false;
+        RenameBox.Visibility = Visibility.Collapsed;
+
+        var title = RenameBox.Text.Trim();
+        if (title.Length == 0)
+            return;
+
+        Model.Title = title;
+        Title = title;
+        TitleBarControl.Title = title;
+        _store.RequestSave();
+    }
+
+    private void CancelRename()
+    {
+        if (!_renaming)
+            return;
+
+        _renaming = false;
+        RenameBox.Visibility = Visibility.Collapsed;
+    }
+
+    private void RenameBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+            CommitRename();
+        else if (e.Key == Key.Escape)
+            CancelRename();
+        else
+            return;
+
+        e.Handled = true;
+    }
+
+    private void RenameBox_LostFocus(object sender, RoutedEventArgs e) => CommitRename();
+
+    private void ColourMenu_SubmenuOpened(object sender, RoutedEventArgs e)
+    {
+        foreach (MenuItem item in ((MenuItem)sender).Items)
+            item.IsChecked = string.Equals((string?)item.Tag, Model.Tint, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void SetTint(string? tint)
+    {
+        Model.Tint = tint;
+        ApplyTint();
+        _store.RequestSave();
+    }
+
+    // A hand-edited fences.json can hold a bad colour: fall back to no colour instead of crashing.
+    private void ApplyTint()
+    {
+        Brush brush = Brushes.Transparent;
+        if (!string.IsNullOrEmpty(Model.Tint))
+        {
+            try { brush = (Brush)new BrushConverter().ConvertFromString(Model.Tint)!; }
+            catch (FormatException) { }
+        }
+        TintLayer.Background = brush;
+    }
+
+    private void NewFence_Click(object sender, RoutedEventArgs e) => NewFenceRequested?.Invoke();
+
+    private void Delete_Click(object sender, RoutedEventArgs e)
+    {
+        // Only the fence goes. Shortcuts and files on the desktop are never touched.
+        var answer = System.Windows.MessageBox.Show(
+            $"Delete fence '{Model.Title}'?\n\nThe shortcuts stay on your desktop; only the fence is removed.",
+            "Desk Fences", System.Windows.MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (answer == System.Windows.MessageBoxResult.Yes)
+            DeleteRequested?.Invoke(this);
     }
 
     private void OpenItem(ItemTile tile)

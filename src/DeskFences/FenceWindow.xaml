@@ -14,12 +14,22 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
+        <!-- Colour layer: behind everything, covers the whole fence. -->
+        <Border x:Name="TintLayer" Grid.RowSpan="2" />
+
         <ui:TitleBar x:Name="TitleBarControl"
                      Grid.Row="0"
                      ShowMinimize="False"
                      ShowMaximize="False"
                      ShowClose="False"
                      Height="32" />
+
+        <!-- Shown only while renaming; sits over the title text. -->
+        <TextBox x:Name="RenameBox" Grid.Row="0"
+                 Visibility="Collapsed" Height="24" Margin="8,4,8,0"
+                 VerticalContentAlignment="Center" Padding="4,0"
+                 Background="#40FFFFFF" Foreground="White" BorderThickness="0"
+                 KeyDown="RenameBox_KeyDown" LostFocus="RenameBox_LostFocus" />
 
         <ScrollViewer Grid.Row="1" Margin="12,0,12,12"
                       VerticalScrollBarVisibility="Auto"
