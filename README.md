@@ -4,7 +4,7 @@ See-through "fences" for the Windows 11 desktop: labeled boxes that group your s
 (Games, Dev, Create...) without hiding them in folders. They sit on the desktop layer, behind every
 window, and blur the wallpaper when you click them.
 
-<!-- Screenshot: docs/screenshot.png (to be added) -->
+![Two fences, "Emulators" and a purple-tinted "Games", on a dark wallpaper](docs/screenshot.png)
 
 ## Features
 
