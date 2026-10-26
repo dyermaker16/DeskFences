@@ -4,12 +4,12 @@ using Wpf.Ui.Controls;
 
 namespace DeskFences;
 
-public partial class MainWindow : FluentWindow
+public partial class FenceWindow : FluentWindow
 {
     private const int GwlExStyle = -20;
     private const int WsExToolWindow = 0x00000080;
 
-    public MainWindow()
+    public FenceWindow()
     {
         InitializeComponent();
         SourceInitialized += (_, _) => HideFromAltTab();
