@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
+using DeskFences.Models;
 using Wpf.Ui.Controls;
 
 namespace DeskFences;
@@ -9,9 +10,20 @@ public partial class FenceWindow : FluentWindow
     private const int GwlExStyle = -20;
     private const int WsExToolWindow = 0x00000080;
 
-    public FenceWindow()
+    public FenceModel Model { get; }
+
+    public FenceWindow(FenceModel model)
     {
+        Model = model;
         InitializeComponent();
+
+        Title = model.Title;
+        TitleBarControl.Title = model.Title;
+        Left = model.Left;
+        Top = model.Top;
+        Width = model.Width;
+        Height = model.Height;
+
         SourceInitialized += (_, _) => HideFromAltTab();
     }
 
