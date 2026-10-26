@@ -24,14 +24,39 @@
                      ShowClose="False"
                      Height="32" />
 
+        <!-- Roll-up: collapses the fence to its title bar. TitleBarHook makes it clickable. -->
+        <Button x:Name="RollButton" Grid.Row="0"
+                HorizontalAlignment="Right" VerticalAlignment="Top"
+                Width="28" Height="28" Margin="0,2,4,0"
+                ToolTip="Roll up" Click="RollButton_Click">
+            <Button.Template>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bg" Background="Transparent" CornerRadius="4">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bg" Property="Background" Value="#30FFFFFF" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Button.Template>
+            <ui:SymbolIcon Symbol="ChevronUp24" FontSize="14" Foreground="White"
+                           RenderTransformOrigin="0.5,0.5">
+                <ui:SymbolIcon.RenderTransform>
+                    <RotateTransform x:Name="RollRotation" />
+                </ui:SymbolIcon.RenderTransform>
+            </ui:SymbolIcon>
+        </Button>
+
         <!-- Shown only while renaming; sits over the title text. -->
         <TextBox x:Name="RenameBox" Grid.Row="0"
-                 Visibility="Collapsed" Height="24" Margin="8,4,8,0"
+                 Visibility="Collapsed" Height="24" Margin="8,4,40,0"
                  VerticalContentAlignment="Center" Padding="4,0"
                  Background="#40FFFFFF" Foreground="White" BorderThickness="0"
                  KeyDown="RenameBox_KeyDown" LostFocus="RenameBox_LostFocus" />
 
-        <ScrollViewer Grid.Row="1" Margin="12,0,12,12"
+        <ScrollViewer x:Name="ItemsArea" Grid.Row="1" Margin="12,0,12,12"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
             <ItemsControl x:Name="TileList">

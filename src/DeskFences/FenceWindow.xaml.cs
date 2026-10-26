@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using DeskFences.Models;
 using DeskFences.Native;
@@ -58,6 +59,8 @@ public partial class FenceWindow : FluentWindow
 
         _titleMenu = BuildTitleMenu();
         ApplyTint();
+        if (model.IsCollapsed)
+            ApplyCollapsed(animate: false);
 
         foreach (var item in model.Items)
             Tiles.Add(new ItemTile(item));
@@ -83,12 +86,14 @@ public partial class FenceWindow : FluentWindow
             Model.Top = Top;
             _store.RequestSave();
         };
+        // While rolled up (or rolling), Height is not the real height: keep the saved one.
         SizeChanged += (_, _) =>
         {
             if (WindowState != WindowState.Normal)
                 return;
             Model.Width = Width;
-            Model.Height = Height;
+            if (!Model.IsCollapsed && !_rolling)
+                Model.Height = Height;
             _store.RequestSave();
         };
 
@@ -112,6 +117,15 @@ public partial class FenceWindow : FluentWindow
     // double-click = rename, right-click = fence menu.
     private IntPtr TitleBarHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
+        // The roll-up button sits inside the title bar: report it as normal content so it gets clicks.
+        if (msg == Win32.WM_NCHITTEST)
+        {
+            if (!IsOverRollButton(lParam))
+                return IntPtr.Zero;
+            handled = true;
+            return Win32.HTCLIENT;
+        }
+
         // This sees every message. Check the message first, and never convert wParam to int:
         // for some messages (e.g. mouse wheel down) it doesn't fit in 32 bits.
         if ((msg != Win32.WM_NCLBUTTONDBLCLK && msg != Win32.WM_NCRBUTTONUP)
@@ -132,7 +146,95 @@ public partial class FenceWindow : FluentWindow
         return IntPtr.Zero;
     }
 
+    // lParam holds the screen point as two signed 16-bit values (physical pixels).
+    private bool IsOverRollButton(IntPtr lParam)
+    {
+        if (!RollButton.IsVisible)
+            return false;
+
+        var value = lParam.ToInt64();
+        var screen = new Point((short)(value & 0xFFFF), (short)((value >> 16) & 0xFFFF));
+        var p = RollButton.PointFromScreen(screen);
+        return p.X >= 0 && p.Y >= 0 && p.X < RollButton.ActualWidth && p.Y < RollButton.ActualHeight;
+    }
+
     private const double TitleBarHeight = 32;
+    private const double ExpandedMinHeight = 100;   // same as MinHeight in the XAML
+    private static readonly Duration RollDuration = TimeSpan.FromMilliseconds(150);
+
+    // Window.Height can't be animated smoothly, so the animation drives this and it sets Height.
+    // Only while rolling: clearing the animation drops it back to 0, which must not move the window.
+    private static readonly DependencyProperty AnimatedHeightProperty = DependencyProperty.Register(
+        "AnimatedHeight", typeof(double), typeof(FenceWindow),
+        new PropertyMetadata(0.0, (d, e) =>
+        {
+            var window = (FenceWindow)d;
+            if (window._rolling)
+                window.Height = (double)e.NewValue;
+        }));
+
+    private bool _rolling;
+
+    // Windows won't make this window shorter than its minimum tracking height (~38 DIP), whatever
+    // MinHeight or WM_GETMINMAXINFO say (tested). Rolled up = the title bar, or that if it's taller.
+    private double CollapsedHeight
+    {
+        get
+        {
+            var dpi = VisualTreeHelper.GetDpi(this);
+            var floor = Win32.GetSystemMetricsForDpi(Win32.SM_CYMINTRACK, (uint)dpi.PixelsPerInchY) / dpi.DpiScaleY;
+            return Math.Max(TitleBarHeight, floor);
+        }
+    }
+
+    private void RollButton_Click(object sender, RoutedEventArgs e)
+    {
+        Model.IsCollapsed = !Model.IsCollapsed;
+        _store.RequestSave();
+        ApplyCollapsed(animate: true);
+    }
+
+    // Collapsed = only the title bar shows. Model.Height always keeps the expanded height.
+    private void ApplyCollapsed(bool animate)
+    {
+        var collapsed = Model.IsCollapsed;
+        var collapsedHeight = CollapsedHeight;
+        var target = collapsed ? collapsedHeight : Model.Height;
+        RollButton.ToolTip = collapsed ? "Expand" : "Roll up";
+
+        // Let the height pass the limits while it moves; the final limits are set when it arrives.
+        MinHeight = collapsedHeight;
+        MaxHeight = double.PositiveInfinity;
+        if (!collapsed)
+            ItemsArea.Visibility = Visibility.Visible;
+
+        void Finish()
+        {
+            _rolling = false;
+            BeginAnimation(AnimatedHeightProperty, null);
+            Height = target;
+            MinHeight = collapsed ? collapsedHeight : ExpandedMinHeight;
+            MaxHeight = collapsed ? collapsedHeight : double.PositiveInfinity;   // collapsed: width-only resize
+            ItemsArea.Visibility = collapsed ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        var angle = collapsed ? 180.0 : 0.0;
+        if (!animate)
+        {
+            RollRotation.Angle = angle;
+            Finish();
+            return;
+        }
+
+        _rolling = true;
+        var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
+        RollRotation.BeginAnimation(RotateTransform.AngleProperty,
+            new DoubleAnimation(angle, RollDuration) { EasingFunction = ease });
+
+        var height = new DoubleAnimation(Height, target, RollDuration) { EasingFunction = ease };
+        height.Completed += (_, _) => Finish();
+        BeginAnimation(AnimatedHeightProperty, height);
+    }
 
     // Keeps the fence on the visible desktop: shrinks it if it's bigger than the screen,
     // and moves it so at least its title bar is visible.

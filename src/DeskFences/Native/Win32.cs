@@ -14,8 +14,10 @@ internal static class Win32
 
     // Clicks on the title bar arrive as non-client messages, because the title bar
     // answers WM_NCHITTEST with HTCAPTION (that's what makes it draggable).
+    internal const int WM_NCHITTEST = 0x0084;
     internal const int WM_NCLBUTTONDBLCLK = 0x00A3;
     internal const int WM_NCRBUTTONUP = 0x00A5;
+    internal const int HTCLIENT = 1;
     internal const int HTCAPTION = 2;
 
     internal const uint SHGFI_SYSICONINDEX = 0x4000;
@@ -152,6 +154,11 @@ internal static class Win32
 
     [DllImport("user32.dll")]
     internal static extern int GetSystemMetrics(int nIndex);
+
+    internal const int SM_CYMINTRACK = 35;   // smallest height Windows lets a resizable window have
+
+    [DllImport("user32.dll")]
+    internal static extern int GetSystemMetricsForDpi(int nIndex, uint dpi);
 
     [DllImport("user32.dll")]
     internal static extern IntPtr WindowFromPoint(POINT point);
