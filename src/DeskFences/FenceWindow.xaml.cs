@@ -56,6 +56,10 @@ public partial class FenceWindow : FluentWindow
             Model.Height = Height;
             _store.RequestSave();
         };
+
+        Loaded += (_, _) => EnsureOnScreen();
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
+        Closed += (_, _) => Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
     }
 
     // A tool window never shows in Alt+Tab or the taskbar.
@@ -64,6 +68,29 @@ public partial class FenceWindow : FluentWindow
         var hwnd = new WindowInteropHelper(this).Handle;
         Win32.SetWindowLong(hwnd, Win32.GWL_EXSTYLE,
             Win32.GetWindowLong(hwnd, Win32.GWL_EXSTYLE) | Win32.WS_EX_TOOLWINDOW);
+    }
+
+    private const double TitleBarHeight = 32;
+
+    // Keeps the fence on the visible desktop: shrinks it if it's bigger than the screen,
+    // and moves it so at least its title bar is visible.
+    private void EnsureOnScreen()
+    {
+        var screenLeft = SystemParameters.VirtualScreenLeft;
+        var screenTop = SystemParameters.VirtualScreenTop;
+        var screenWidth = SystemParameters.VirtualScreenWidth;
+        var screenHeight = SystemParameters.VirtualScreenHeight;
+
+        Width = Math.Min(Width, screenWidth);
+        Height = Math.Min(Height, screenHeight);
+        Left = Math.Clamp(Left, screenLeft, screenLeft + screenWidth - Width);
+        Top = Math.Clamp(Top, screenTop, screenTop + screenHeight - TitleBarHeight);
+    }
+
+    // Monitor added, removed or moved: the fence may now be off-screen.
+    private void OnDisplaySettingsChanged(object? sender, EventArgs e)
+    {
+        Dispatcher.Invoke(EnsureOnScreen);
     }
 
     // Only accept files. Always "Link", never "Move": the original file stays where it is.
