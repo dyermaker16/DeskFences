@@ -83,6 +83,18 @@ internal static class Win32
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     internal static extern uint RegisterWindowMessage(string lpString);
 
+    // --- Always-on blur (a fence is almost never the active window) ---
+
+    internal const int WM_NCACTIVATE = 0x0086;
+    internal const int DWMWA_BORDER_COLOR = 34;          // Windows 11
+    internal const uint DWMWA_COLOR_NONE = 0xFFFFFFFE;
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    internal static extern IntPtr DefWindowProc(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("dwmapi.dll")]
+    internal static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref uint value, int size);
+
     // --- Low-level mouse hook (desktop double-click) ---
 
     internal const int WH_MOUSE_LL = 14;

@@ -2,7 +2,7 @@
 
 See-through "fences" for the Windows 11 desktop: labeled boxes that group your shortcuts
 (Games, Dev, Create...) without hiding them in folders. They sit on the desktop layer, behind every
-window, and blur the wallpaper when you click them.
+window, and blur the wallpaper behind them.
 
 ![Two fences, "Emulators" and a purple-tinted "Games", on a dark wallpaper](docs/screenshot.png)
 
@@ -16,7 +16,9 @@ window, and blur the wallpaper when you click them.
 - **Roll up** a fence to just its title with the chevron button.
 - **Per-fence menu** (right-click the title): rename, colour, new fence, delete. Double-click the title
   to rename.
-- **Themes:** *Clean* (Windows 11) and *Terminal* (green monospace), switchable live from the tray.
+- **Themes:** *Clean* (Windows 11), *Glass* (glassmorphism: frosted sheen and a bright top-left
+  edge) and *Terminal* (green monospace), switchable live from the tray.
+- **Always blurred**, not only while you click a fence.
 - **Snaps** to other fences' edges and to a 10 px grid when you move it.
 - **Tray icon:** new fence, hide/show all, theme, start with Windows, open the settings folder, quit.
 - Everything is saved to `%AppData%\DeskFences\fences.json` (written atomically, so a crash can't
@@ -48,7 +50,8 @@ dotnet publish src/DeskFences -c Release -r win-x64 --self-contained false -p:Pu
 Each fence is a borderless WPF window ([WPF UI](https://github.com/lepoco/wpfui) for the acrylic
 backdrop). It stays a top-level window **owned** by the desktop (`Progman`) and is kept at the bottom
 of the z-order, instead of being re-parented into the desktop, so it keeps its blur and works with
-animated wallpapers. The desktop double-click uses a low-level mouse hook on its own thread and asks
+animated wallpapers. Windows only draws the acrylic blur on the active window, so each fence
+answers `WM_NCACTIVATE` as "active" to keep it on. The desktop double-click uses a low-level mouse hook on its own thread and asks
 the desktop's icon list (MSAA hit test) whether the click was on an icon.
 
 ## Credits

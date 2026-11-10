@@ -71,6 +71,7 @@ public partial class FenceWindow : FluentWindow
             HideFromAltTab();
             DesktopAttach.Attach(this);
             HwndSource.FromHwnd(new WindowInteropHelper(this).Handle).AddHook(MoveHook);
+            KeepBlurWhenInactive();
         };
 
         // WPF-UI's TitleBar adds its own hook when it loads, and shows the system menu on a
@@ -117,6 +118,34 @@ public partial class FenceWindow : FluentWindow
             Win32.GetWindowLong(hwnd, Win32.GWL_EXSTYLE) | Win32.WS_EX_TOOLWINDOW);
         Win32.SetWindowLong(hwnd, Win32.GWL_STYLE,
             Win32.GetWindowLong(hwnd, Win32.GWL_STYLE) & ~Win32.WS_MAXIMIZEBOX);
+    }
+
+    // Windows drops the blur as soon as a window is inactive, and a fence almost always is.
+    // Answering every WM_NCACTIVATE as "active" keeps the blur on.
+    private void KeepBlurWhenInactive()
+    {
+        HwndSource.FromHwnd(new WindowInteropHelper(this).Handle).AddHook(ActiveLookHook);
+
+        // No blue Windows accent border on the clicked fence: the themes draw their own edge.
+        // Something resets it when the window activates, so set it again each time.
+        HideAccentBorder();
+        Activated += (_, _) => HideAccentBorder();
+    }
+
+    private void HideAccentBorder()
+    {
+        var none = Win32.DWMWA_COLOR_NONE;
+        Win32.DwmSetWindowAttribute(new WindowInteropHelper(this).Handle, Win32.DWMWA_BORDER_COLOR, ref none, sizeof(uint));
+    }
+
+    private static IntPtr ActiveLookHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg != Win32.WM_NCACTIVATE)
+            return IntPtr.Zero;
+
+        // The return value still lets Windows move the focus away normally.
+        handled = true;
+        return Win32.DefWindowProc(hwnd, msg, (IntPtr)1, lParam);
     }
 
     // WPF never sees mouse clicks on the title bar (they are non-client), so handle them here:

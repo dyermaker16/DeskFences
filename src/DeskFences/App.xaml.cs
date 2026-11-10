@@ -21,7 +21,7 @@ public partial class App : Application
     private ResourceDictionary? _theme;
 
     // Files in Themes/. The first one is the default.
-    public static readonly string[] ThemeNames = { "Clean", "Terminal" };
+    public static readonly string[] ThemeNames = { "Clean", "Glass", "Terminal" };
     private readonly List<FenceWindow> _fences = new();
     private bool _fencesVisible = true;
 

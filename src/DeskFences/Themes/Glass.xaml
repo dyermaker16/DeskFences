@@ -1,0 +1,18 @@
+<!-- Glass: glassmorphism. A light frosted sheen over the blur (brighter at the top, like light
+     catching the glass) and a thin edge that is bright top-left and fades out bottom-right. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="FenceForeground" Color="White" />
+    <FontFamily x:Key="FenceFontFamily">Segoe UI Variable Display, Segoe UI</FontFamily>
+    <LinearGradientBrush x:Key="FenceBackground" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#38FFFFFF" Offset="0" />
+        <GradientStop Color="#14FFFFFF" Offset="0.35" />
+        <GradientStop Color="#0AFFFFFF" Offset="1" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="FenceBorderBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#B0FFFFFF" Offset="0" />
+        <GradientStop Color="#33FFFFFF" Offset="0.5" />
+        <GradientStop Color="#14FFFFFF" Offset="1" />
+    </LinearGradientBrush>
+    <Thickness x:Key="FenceBorderThickness">1</Thickness>
+</ResourceDictionary>
