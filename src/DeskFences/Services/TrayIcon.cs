@@ -68,12 +68,21 @@ public sealed class TrayIcon : IDisposable
 
         _icon = new WinForms.NotifyIcon
         {
-            Icon = Drawing.Icon.ExtractAssociatedIcon(Environment.ProcessPath!)!,
+            Icon = LoadTrayIcon(),
             Text = "Desk Fences",
             ContextMenuStrip = menu,
             Visible = true
         };
         _icon.DoubleClick += (_, _) => ToggleFencesClicked?.Invoke();
+    }
+
+    // The small-size frame of the app icon (the .ico has a simpler drawing for 16-24 px),
+    // instead of the exe's 32 px icon scaled down.
+    private static Drawing.Icon LoadTrayIcon()
+    {
+        var uri = new Uri("pack://application:,,,/Assets/DeskFences.ico");
+        using var stream = System.Windows.Application.GetResourceStream(uri).Stream;
+        return new Drawing.Icon(stream, WinForms.SystemInformation.SmallIconSize);
     }
 
     public void SetFencesVisible(bool visible)

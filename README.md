@@ -1,5 +1,7 @@
 # Desk Fences
 
+<img src="docs/icon.png" width="96" alt="Desk Fences icon: two glass fences, the front one holding app tiles">
+
 See-through "fences" for the Windows 11 desktop: labeled boxes that group your shortcuts
 (Games, Dev, Create...) without hiding them in folders. They sit on the desktop layer, behind every
 window, and blur the wallpaper behind them.
