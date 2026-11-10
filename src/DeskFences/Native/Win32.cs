@@ -92,6 +92,10 @@ internal static class Win32
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     internal static extern IntPtr DefWindowProc(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool IsIconic(IntPtr hWnd);   // minimized
+
     [DllImport("dwmapi.dll")]
     internal static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref uint value, int size);
 

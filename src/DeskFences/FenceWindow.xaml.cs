@@ -85,7 +85,7 @@ public partial class FenceWindow : FluentWindow
         // Only a normal (not maximized/minimized) position is worth saving.
         LocationChanged += (_, _) =>
         {
-            if (WindowState != WindowState.Normal)
+            if (!HasNormalPlacement)
                 return;
             Model.Left = Left;
             Model.Top = Top;
@@ -94,7 +94,7 @@ public partial class FenceWindow : FluentWindow
         // While rolled up (or rolling), Height is not the real height: keep the saved one.
         SizeChanged += (_, _) =>
         {
-            if (WindowState != WindowState.Normal)
+            if (!HasNormalPlacement)
                 return;
             Model.Width = Width;
             if (!Model.IsCollapsed && !_rolling)
@@ -110,6 +110,19 @@ public partial class FenceWindow : FluentWindow
         };
         Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
         Closed += (_, _) => Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
+    }
+
+    // Windows moves a window to its minimized spot before WPF's WindowState says Minimized, so
+    // that move used to be saved as the fence's position. IsIconic is already true by then.
+    private bool HasNormalPlacement =>
+        WindowState == WindowState.Normal && !Win32.IsIconic(new WindowInteropHelper(this).Handle);
+
+    // A fence belongs on the desktop: if anything minimizes it (Win+M, another tool), put it back.
+    protected override void OnStateChanged(EventArgs e)
+    {
+        base.OnStateChanged(e);
+        if (WindowState == WindowState.Minimized)
+            Dispatcher.BeginInvoke(() => WindowState = WindowState.Normal);
     }
 
     private bool IsWidget => Model.Kind != FenceKinds.Icons;
@@ -356,6 +369,9 @@ public partial class FenceWindow : FluentWindow
     // and moves it so at least its title bar is visible.
     private void EnsureOnScreen()
     {
+        if (!HasNormalPlacement)
+            return;
+
         var screenLeft = SystemParameters.VirtualScreenLeft;
         var screenTop = SystemParameters.VirtualScreenTop;
         var screenWidth = SystemParameters.VirtualScreenWidth;
