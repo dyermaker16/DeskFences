@@ -96,9 +96,11 @@ public partial class FenceWindow : FluentWindow
         {
             if (!HasNormalPlacement)
                 return;
+            // Rolled up (or rolling), the window is smaller than the fence: keep the saved size.
+            if (Model.IsCollapsed || _rolling)
+                return;
             Model.Width = Width;
-            if (!Model.IsCollapsed && !_rolling)
-                Model.Height = Height;
+            Model.Height = Height;
             _store.RequestSave();
         };
 
@@ -288,21 +290,42 @@ public partial class FenceWindow : FluentWindow
     }
 
     private const double TitleBarHeight = 32;
+    private const double ExpandedMinWidth = 160;    // same as MinWidth in the XAML
     private const double ExpandedMinHeight = 100;   // same as MinHeight in the XAML
     private static readonly Duration RollDuration = TimeSpan.FromMilliseconds(150);
 
-    // Window.Height can't be animated smoothly, so the animation drives this and it sets Height.
-    // Only while rolling: clearing the animation drops it back to 0, which must not move the window.
-    private static readonly DependencyProperty AnimatedHeightProperty = DependencyProperty.Register(
-        "AnimatedHeight", typeof(double), typeof(FenceWindow),
+    // Window size can't be animated smoothly, so the animation drives this from 0 to 1 and it sets
+    // Width and Height between _rollFrom and _rollTo. Only while rolling: clearing the animation
+    // drops it back to 0, which must not resize the window.
+    private static readonly DependencyProperty RollProgressProperty = DependencyProperty.Register(
+        "RollProgress", typeof(double), typeof(FenceWindow),
         new PropertyMetadata(0.0, (d, e) =>
         {
             var window = (FenceWindow)d;
-            if (window._rolling)
-                window.Height = (double)e.NewValue;
+            if (!window._rolling)
+                return;
+            var t = (double)e.NewValue;
+            window.Width = window._rollFrom.Width + (window._rollTo.Width - window._rollFrom.Width) * t;
+            window.Height = window._rollFrom.Height + (window._rollTo.Height - window._rollFrom.Height) * t;
         }));
 
     private bool _rolling;
+    private Size _rollFrom;
+    private Size _rollTo;
+
+    // Rolled up = just wide enough for the title and the roll button, so it takes little space.
+    // The title's desired size includes its margins (text on the left, button space on the right).
+    private double CollapsedWidth
+    {
+        get
+        {
+            TitleText.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            var dpi = VisualTreeHelper.GetDpi(this);
+            var floor = Win32.GetSystemMetricsForDpi(Win32.SM_CXMINTRACK, (uint)dpi.PixelsPerInchX) / dpi.DpiScaleX;
+            var fit = Math.Ceiling(TitleText.DesiredSize.Width) + 8;
+            return Math.Min(Model.Width, Math.Max(fit, floor));
+        }
+    }
 
     // Windows won't make this window shorter than its minimum tracking height (~38 DIP), whatever
     // MinHeight or WM_GETMINMAXINFO say (tested). Rolled up = the title bar, or that if it's taller.
@@ -323,16 +346,19 @@ public partial class FenceWindow : FluentWindow
         ApplyCollapsed(animate: true);
     }
 
-    // Collapsed = only the title bar shows. Model.Height always keeps the expanded height.
+    // Collapsed = a small pill with just the title bar, anchored at the left edge.
+    // Model.Width and Model.Height always keep the expanded size.
     private void ApplyCollapsed(bool animate)
     {
         var collapsed = Model.IsCollapsed;
-        var collapsedHeight = CollapsedHeight;
-        var target = collapsed ? collapsedHeight : Model.Height;
+        var small = new Size(CollapsedWidth, CollapsedHeight);
+        var target = collapsed ? small : new Size(Model.Width, Model.Height);
         RollButton.ToolTip = collapsed ? "Expand" : "Roll up";
 
-        // Let the height pass the limits while it moves; the final limits are set when it arrives.
-        MinHeight = collapsedHeight;
+        // Let the size pass the limits while it moves; the final limits are set when it arrives.
+        MinWidth = Math.Min(small.Width, ExpandedMinWidth);
+        MinHeight = small.Height;
+        MaxWidth = double.PositiveInfinity;
         MaxHeight = double.PositiveInfinity;
         if (!collapsed)
             Body.Visibility = Visibility.Visible;
@@ -340,10 +366,14 @@ public partial class FenceWindow : FluentWindow
         void Finish()
         {
             _rolling = false;
-            BeginAnimation(AnimatedHeightProperty, null);
-            Height = target;
-            MinHeight = collapsed ? collapsedHeight : ExpandedMinHeight;
-            MaxHeight = collapsed ? collapsedHeight : double.PositiveInfinity;   // collapsed: width-only resize
+            BeginAnimation(RollProgressProperty, null);
+            Width = target.Width;
+            Height = target.Height;
+            // Rolled up it has a fixed size; expand it to resize.
+            MinWidth = collapsed ? small.Width : ExpandedMinWidth;
+            MaxWidth = collapsed ? small.Width : double.PositiveInfinity;
+            MinHeight = collapsed ? small.Height : ExpandedMinHeight;
+            MaxHeight = collapsed ? small.Height : double.PositiveInfinity;
             Body.Visibility = collapsed ? Visibility.Collapsed : Visibility.Visible;
         }
 
@@ -360,9 +390,11 @@ public partial class FenceWindow : FluentWindow
         RollRotation.BeginAnimation(RotateTransform.AngleProperty,
             new DoubleAnimation(angle, RollDuration) { EasingFunction = ease });
 
-        var height = new DoubleAnimation(Height, target, RollDuration) { EasingFunction = ease };
-        height.Completed += (_, _) => Finish();
-        BeginAnimation(AnimatedHeightProperty, height);
+        _rollFrom = new Size(Width, Height);
+        _rollTo = target;
+        var progress = new DoubleAnimation(0, 1, RollDuration) { EasingFunction = ease };
+        progress.Completed += (_, _) => Finish();
+        BeginAnimation(RollProgressProperty, progress);
     }
 
     // Keeps the fence on the visible desktop: shrinks it if it's bigger than the screen,
@@ -523,6 +555,8 @@ public partial class FenceWindow : FluentWindow
         Title = title;
         TitleText.Text = title;
         _store.RequestSave();
+        if (Model.IsCollapsed)
+            ApplyCollapsed(animate: false);   // the pill fits the new title
     }
 
     private void CancelRename()

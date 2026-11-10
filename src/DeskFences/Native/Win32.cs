@@ -198,6 +198,7 @@ internal static class Win32
     [DllImport("user32.dll")]
     internal static extern int GetSystemMetrics(int nIndex);
 
+    internal const int SM_CXMINTRACK = 34;   // smallest width Windows lets a resizable window have
     internal const int SM_CYMINTRACK = 35;   // smallest height Windows lets a resizable window have
 
     [DllImport("user32.dll")]
