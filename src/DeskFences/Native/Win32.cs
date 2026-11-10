@@ -95,6 +95,31 @@ internal static class Win32
     [DllImport("dwmapi.dll")]
     internal static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref uint value, int size);
 
+    // --- System monitor widgets ---
+
+    // Each time is a FILETIME (100 ns units since boot); kernel time includes idle time.
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool GetSystemTimes(out ulong idleTime, out ulong kernelTime, out ulong userTime);
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct MEMORYSTATUSEX
+    {
+        public uint dwLength;
+        public uint dwMemoryLoad;
+        public ulong ullTotalPhys;
+        public ulong ullAvailPhys;
+        public ulong ullTotalPageFile;    // commit limit (RAM + page file): Rainmeter's "swap"
+        public ulong ullAvailPageFile;
+        public ulong ullTotalVirtual;
+        public ulong ullAvailVirtual;
+        public ulong ullAvailExtendedVirtual;
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX buffer);
+
     // --- Low-level mouse hook (desktop double-click) ---
 
     internal const int WH_MOUSE_LL = 14;

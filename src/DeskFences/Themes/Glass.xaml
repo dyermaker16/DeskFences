@@ -15,4 +15,6 @@
         <GradientStop Color="#14FFFFFF" Offset="1" />
     </LinearGradientBrush>
     <Thickness x:Key="FenceBorderThickness">1</Thickness>
+    <!-- Widgets: drive bars and the second graph line (network out). -->
+    <SolidColorBrush x:Key="FenceAccent" Color="#8FE9F5" />
 </ResourceDictionary>

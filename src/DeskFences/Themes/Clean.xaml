@@ -6,4 +6,6 @@
     <SolidColorBrush x:Key="FenceBackground" Color="Transparent" />
     <SolidColorBrush x:Key="FenceBorderBrush" Color="Transparent" />
     <Thickness x:Key="FenceBorderThickness">0</Thickness>
+    <!-- Widgets: drive bars and the second graph line (network out). -->
+    <SolidColorBrush x:Key="FenceAccent" Color="#60CDFF" />
 </ResourceDictionary>

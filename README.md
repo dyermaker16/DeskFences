@@ -21,8 +21,11 @@ window, and blur the wallpaper behind them.
 - **Themes:** *Clean* (Windows 11), *Glass* (glassmorphism: frosted sheen and a bright top-left
   edge) and *Terminal* (green monospace), switchable live from the tray.
 - **Always blurred**, not only while you click a fence.
+- **System widgets** in the same glass style, so you don't need Rainmeter for the basics: *CPU*,
+  *Memory* (with swap), *Network* (in and out), *Drives* (a bar per drive) and *Notes*. Each one is
+  a small fence: drag, snap, roll up, rename, colour. One-minute graphs, about 0.1% CPU.
 - **Snaps** to other fences' edges and to a 10 px grid when you move it.
-- **Tray icon:** new fence, hide/show all, theme, start with Windows, open the settings folder, quit.
+- **Tray icon:** new fence, new widget, hide/show all, theme, start with Windows, open the settings folder, quit.
 - Everything is saved to `%AppData%\DeskFences\fences.json` (written atomically, so a crash can't
   corrupt it). Sharp on every monitor (per-monitor DPI aware).
 

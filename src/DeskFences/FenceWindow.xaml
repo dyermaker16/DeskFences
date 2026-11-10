@@ -131,5 +131,8 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
+
+        <!-- Widget fences (CPU, Memory...) show their widget here instead of the icon grid. -->
+        <Border x:Name="WidgetHost" Grid.Row="1" Margin="12,0,12,12" Visibility="Collapsed" />
     </Grid>
 </ui:FluentWindow>

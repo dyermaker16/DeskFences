@@ -11,6 +11,7 @@ using System.Windows.Threading;
 using DeskFences.Models;
 using DeskFences.Native;
 using DeskFences.Services;
+using DeskFences.Widgets;
 using Wpf.Ui.Controls;
 using ContextMenu = System.Windows.Controls.ContextMenu;
 using MenuItem = System.Windows.Controls.MenuItem;
@@ -44,11 +45,13 @@ public partial class FenceWindow : FluentWindow
     public event Action? NewFenceRequested;
     public event Action<FenceWindow>? DeleteRequested;
 
-    public FenceWindow(FenceModel model, SettingsStore store)
+    public FenceWindow(FenceModel model, SettingsStore store, SystemMonitor monitor)
     {
         Model = model;
         _store = store;
         InitializeComponent();
+        if (IsWidget)
+            ShowWidget(monitor);
 
         Title = model.Title;
         TitleText.Text = model.Title;
@@ -107,6 +110,29 @@ public partial class FenceWindow : FluentWindow
         };
         Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
         Closed += (_, _) => Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
+    }
+
+    private bool IsWidget => Model.Kind != FenceKinds.Icons;
+
+    // What rolls up: the icon grid, or the widget.
+    private FrameworkElement Body => IsWidget ? WidgetHost : ItemsArea;
+
+    // A widget fence keeps everything a fence has (glass, desktop layer, snap, roll-up, rename,
+    // colour, saving) and just shows the widget instead of icons.
+    private void ShowWidget(SystemMonitor monitor)
+    {
+        ItemsArea.Visibility = Visibility.Collapsed;
+        AllowDrop = false;
+        FrameworkElement widget = Model.Kind switch
+        {
+            FenceKinds.Drives => new DrivesWidget(monitor),
+            FenceKinds.Notes => new NotesWidget(Model, _store),
+            _ => new GraphWidget(Model.Kind, monitor),
+        };
+        WidgetHost.Child = widget;
+        WidgetHost.Visibility = Visibility.Visible;
+        if (widget is IDisposable disposable)
+            Closed += (_, _) => disposable.Dispose();
     }
 
     // A tool window never shows in Alt+Tab or the taskbar.
@@ -296,7 +322,7 @@ public partial class FenceWindow : FluentWindow
         MinHeight = collapsedHeight;
         MaxHeight = double.PositiveInfinity;
         if (!collapsed)
-            ItemsArea.Visibility = Visibility.Visible;
+            Body.Visibility = Visibility.Visible;
 
         void Finish()
         {
@@ -305,7 +331,7 @@ public partial class FenceWindow : FluentWindow
             Height = target;
             MinHeight = collapsed ? collapsedHeight : ExpandedMinHeight;
             MaxHeight = collapsed ? collapsedHeight : double.PositiveInfinity;   // collapsed: width-only resize
-            ItemsArea.Visibility = collapsed ? Visibility.Collapsed : Visibility.Visible;
+            Body.Visibility = collapsed ? Visibility.Collapsed : Visibility.Visible;
         }
 
         var angle = collapsed ? 180.0 : 0.0;
@@ -437,7 +463,7 @@ public partial class FenceWindow : FluentWindow
         menu.Items.Add(colour);
         menu.Items.Add(new System.Windows.Controls.Separator());
         menu.Items.Add(Item("New fence", NewFence_Click));
-        menu.Items.Add(Item("Delete fence", Delete_Click));
+        menu.Items.Add(Item(IsWidget ? "Delete widget" : "Delete fence", Delete_Click));
         return menu;
     }
 
@@ -536,8 +562,10 @@ public partial class FenceWindow : FluentWindow
     private void Delete_Click(object sender, RoutedEventArgs e)
     {
         // Only the fence goes. Shortcuts and files on the desktop are never touched.
-        var answer = System.Windows.MessageBox.Show(
-            $"Delete fence '{Model.Title}'?\n\nThe shortcuts stay on your desktop; only the fence is removed.",
+        var question = IsWidget
+            ? $"Delete widget '{Model.Title}'?"
+            : $"Delete fence '{Model.Title}'?\n\nThe shortcuts stay on your desktop; only the fence is removed.";
+        var answer = System.Windows.MessageBox.Show(question,
             "Desk Fences", System.Windows.MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (answer == System.Windows.MessageBoxResult.Yes)
             DeleteRequested?.Invoke(this);

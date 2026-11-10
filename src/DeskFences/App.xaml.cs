@@ -23,6 +23,7 @@ public partial class App : Application
     // Files in Themes/. The first one is the default.
     public static readonly string[] ThemeNames = { "Clean", "Glass", "Terminal" };
     private readonly List<FenceWindow> _fences = new();
+    private readonly SystemMonitor _monitor = new();   // shared by all widgets; idle without them
     private bool _fencesVisible = true;
 
     protected override void OnStartup(StartupEventArgs e)
@@ -54,6 +55,7 @@ public partial class App : Application
         _tray = new TrayIcon(_store.Settings.StartWithWindows, _store.Settings.DoubleClickDesktopToggles, _store.Settings.Theme);
         _tray.ThemeChanged += SetTheme;
         _tray.NewFenceClicked += NewFence;
+        _tray.NewWidgetClicked += NewWidget;
         _tray.ToggleFencesClicked += ToggleFences;
         _tray.StartWithWindowsChanged += SetStartWithWindows;
         _tray.DoubleClickDesktopChanged += SetDoubleClickDesktop;
@@ -74,7 +76,7 @@ public partial class App : Application
 
     private void OpenFence(FenceModel model)
     {
-        var window = new FenceWindow(model, _store!);
+        var window = new FenceWindow(model, _store!, _monitor);
         window.NewFenceRequested += NewFence;
         window.DeleteRequested += DeleteFence;
         _fences.Add(window);
@@ -89,7 +91,15 @@ public partial class App : Application
         window.Close();
     }
 
-    private void NewFence()
+    private void NewFence() => AddFence(new FenceModel { Title = "New fence" });
+
+    private void NewWidget(string kind)
+    {
+        var (_, title, width, height) = FenceKinds.Widgets.First(w => w.Kind == kind);
+        AddFence(new FenceModel { Title = title, Kind = kind, Width = width, Height = height });
+    }
+
+    private void AddFence(FenceModel model)
     {
         // A new fence while the others are hidden would look lonely: show them all first.
         if (!_fencesVisible)
@@ -97,7 +107,6 @@ public partial class App : Application
 
         // Starts in the middle of the work area, so it isn't hidden behind the taskbar.
         var area = SystemParameters.WorkArea;
-        var model = new FenceModel { Title = "New fence" };
         model.Left = area.Left + (area.Width - model.Width) / 2;
         model.Top = area.Top + (area.Height - model.Height) / 2;
 

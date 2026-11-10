@@ -11,4 +11,9 @@ public class FenceModel
     public bool IsCollapsed { get; set; }
     public string? Tint { get; set; }   // e.g. "#3060A0FF", null = default
     public List<FenceItem> Items { get; set; } = new();
+
+    // FenceKinds.Icons for a normal fence, otherwise a widget (older fences.json files have no
+    // Kind, so they load as Icons).
+    public string Kind { get; set; } = FenceKinds.Icons;
+    public string? Notes { get; set; }   // text of a Notes widget
 }

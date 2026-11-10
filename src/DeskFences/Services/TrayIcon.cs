@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using DeskFences.Models;
 using WinForms = System.Windows.Forms;
 using Drawing = System.Drawing;
 
@@ -13,6 +14,7 @@ public sealed class TrayIcon : IDisposable
     private readonly WinForms.ToolStripMenuItem _startupItem;
 
     public event Action? NewFenceClicked;
+    public event Action<string>? NewWidgetClicked;   // a FenceKinds value
     public event Action? ToggleFencesClicked;
     public event Action? QuitClicked;
     public event Action<bool>? StartWithWindowsChanged;
@@ -52,8 +54,13 @@ public sealed class TrayIcon : IDisposable
         };
         _startupItem.CheckedChanged += (_, _) => StartWithWindowsChanged?.Invoke(_startupItem.Checked);
 
+        var widgetMenu = new WinForms.ToolStripMenuItem("New widget");
+        foreach (var (kind, title, _, _) in FenceKinds.Widgets)
+            widgetMenu.DropDownItems.Add(title, null, (_, _) => NewWidgetClicked?.Invoke(kind));
+
         var menu = new WinForms.ContextMenuStrip();
         menu.Items.Add("New fence", null, (_, _) => NewFenceClicked?.Invoke());
+        menu.Items.Add(widgetMenu);
         menu.Items.Add(_toggleItem);
         menu.Items.Add(doubleClickItem);
         menu.Items.Add(themeMenu);
