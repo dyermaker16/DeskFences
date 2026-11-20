@@ -44,6 +44,9 @@ public partial class FenceWindow : FluentWindow
     // App owns the fence list, so these ask it to act.
     public event Action? NewFenceRequested;
     public event Action<FenceWindow>? DeleteRequested;
+    public event Action<FenceWindow>? RolledByUser;   // the roll-up arrow was clicked
+
+    public bool IsIconFence => Model.Kind == FenceKinds.Icons;
 
     public FenceWindow(FenceModel model, SettingsStore store, SystemMonitor monitor)
     {
@@ -342,6 +345,52 @@ public partial class FenceWindow : FluentWindow
     private void RollButton_Click(object sender, RoutedEventArgs e)
     {
         Model.IsCollapsed = !Model.IsCollapsed;
+        _store.RequestSave();
+        ApplyCollapsed(animate: true);
+        RolledByUser?.Invoke(this);
+    }
+
+    // The height this fence will have once any roll animation ends; App stacks fences with it.
+    public double StackHeight => Model.IsCollapsed ? CollapsedHeight : Model.Height;
+
+    // Window.Top can't be animated smoothly either, so the same trick as the roll animation.
+    private static readonly DependencyProperty AnimatedTopProperty = DependencyProperty.Register(
+        "AnimatedTop", typeof(double), typeof(FenceWindow),
+        new PropertyMetadata(0.0, (d, e) =>
+        {
+            var window = (FenceWindow)d;
+            if (window._moving)
+                window.Top = (double)e.NewValue;
+        }));
+
+    private bool _moving;
+
+    // Slides the fence up or down to a new Top (used when App restacks a column).
+    public void MoveTo(double top)
+    {
+        if (Math.Abs(top - Top) < 0.5)
+            return;
+
+        _moving = true;
+        var slide = new DoubleAnimation(Top, top, RollDuration)
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
+        };
+        slide.Completed += (_, _) =>
+        {
+            _moving = false;
+            BeginAnimation(AnimatedTopProperty, null);
+            Top = top;
+        };
+        BeginAnimation(AnimatedTopProperty, slide);
+    }
+
+    // Used by App to keep one fence open at a time.
+    public void RollUp()
+    {
+        if (Model.IsCollapsed)
+            return;
+        Model.IsCollapsed = true;
         _store.RequestSave();
         ApplyCollapsed(animate: true);
     }

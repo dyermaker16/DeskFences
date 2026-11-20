@@ -20,8 +20,9 @@ public sealed class TrayIcon : IDisposable
     public event Action<bool>? StartWithWindowsChanged;
     public event Action<bool>? DoubleClickDesktopChanged;
     public event Action<string>? ThemeChanged;
+    public event Action<bool>? OneFenceOpenChanged;
 
-    public TrayIcon(bool startWithWindows, bool doubleClickDesktop, string theme)
+    public TrayIcon(bool startWithWindows, bool doubleClickDesktop, string theme, bool oneFenceOpen)
     {
         // One checked item at a time, like radio buttons.
         var themeMenu = new WinForms.ToolStripMenuItem("Theme");
@@ -47,6 +48,13 @@ public sealed class TrayIcon : IDisposable
         };
         doubleClickItem.CheckedChanged += (_, _) => DoubleClickDesktopChanged?.Invoke(doubleClickItem.Checked);
 
+        var oneOpenItem = new WinForms.ToolStripMenuItem("One fence open at a time")
+        {
+            CheckOnClick = true,
+            Checked = oneFenceOpen
+        };
+        oneOpenItem.CheckedChanged += (_, _) => OneFenceOpenChanged?.Invoke(oneOpenItem.Checked);
+
         _startupItem = new WinForms.ToolStripMenuItem("Start with Windows")
         {
             CheckOnClick = true,
@@ -63,6 +71,7 @@ public sealed class TrayIcon : IDisposable
         menu.Items.Add(widgetMenu);
         menu.Items.Add(_toggleItem);
         menu.Items.Add(doubleClickItem);
+        menu.Items.Add(oneOpenItem);
         menu.Items.Add(themeMenu);
         menu.Items.Add(_startupItem);
         menu.Items.Add("Open settings folder", null, (_, _) =>

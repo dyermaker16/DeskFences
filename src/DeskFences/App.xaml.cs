@@ -52,7 +52,9 @@ public partial class App : Application
         foreach (var model in _store.Settings.Fences)
             OpenFence(model);
 
-        _tray = new TrayIcon(_store.Settings.StartWithWindows, _store.Settings.DoubleClickDesktopToggles, _store.Settings.Theme);
+        _tray = new TrayIcon(_store.Settings.StartWithWindows, _store.Settings.DoubleClickDesktopToggles,
+            _store.Settings.Theme, _store.Settings.OneFenceOpen);
+        _tray.OneFenceOpenChanged += SetOneFenceOpen;
         _tray.ThemeChanged += SetTheme;
         _tray.NewFenceClicked += NewFence;
         _tray.NewWidgetClicked += NewWidget;
@@ -79,8 +81,50 @@ public partial class App : Application
         var window = new FenceWindow(model, _store!, _monitor);
         window.NewFenceRequested += NewFence;
         window.DeleteRequested += DeleteFence;
+        window.RolledByUser += OnFenceRolled;
         _fences.Add(window);
         window.Show();
+    }
+
+    private const double StackGap = 12;          // space between stacked fences
+    private const double ColumnTolerance = 12;   // fences whose left edges are this close share a column
+
+    // Accordion: opening one icon fence rolls up the others, and the fences in its column slide so
+    // the open one gets its full height and the pills below sit right under it. Widgets stay put.
+    private void OnFenceRolled(FenceWindow rolled)
+    {
+        if (!_store!.Settings.OneFenceOpen || !rolled.IsIconFence)
+            return;
+
+        if (!rolled.Model.IsCollapsed)
+        {
+            foreach (var other in _fences)
+            {
+                if (other != rolled && other.IsIconFence)
+                    other.RollUp();
+            }
+        }
+        Restack(rolled);
+    }
+
+    private void Restack(FenceWindow member)
+    {
+        var column = _fences
+            .Where(f => f.IsIconFence && f.IsVisible && Math.Abs(f.Left - member.Left) <= ColumnTolerance)
+            .OrderBy(f => f.Top)
+            .ToList();
+        var y = column[0].Top;
+        foreach (var fence in column)
+        {
+            fence.MoveTo(y);
+            y += fence.StackHeight + StackGap;
+        }
+    }
+
+    private void SetOneFenceOpen(bool enabled)
+    {
+        _store!.Settings.OneFenceOpen = enabled;
+        _store.RequestSave();
     }
 
     private void DeleteFence(FenceWindow window)
